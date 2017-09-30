@@ -1,0 +1,13 @@
+# Visual Studio build output
+src/**/bin/**
+src/**/obj/**
+
+# User-specific files 
+*.suo
+*.user
+
+# NuGet packages
+packages/
+
+# Visual Studio cache/options directory 
+src/**/.vs/
