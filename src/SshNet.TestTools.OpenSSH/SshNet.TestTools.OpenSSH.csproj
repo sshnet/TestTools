@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>SshNet.TestTools.OpenSSH</RootNamespace>
     <AssemblyName>SshNet.TestTools.OpenSSH</AssemblyName>
-    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFrameworkProfile />
@@ -36,13 +36,17 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Cipher.cs" />
     <Compile Include="Formatters\BooleanFormatter.cs" />
     <Compile Include="Formatters\Int32Formatter.cs" />
     <Compile Include="Formatters\LogLevelFormatter.cs" />
     <Compile Include="Formatters\MatchFormatter.cs" />
     <Compile Include="Formatters\SubsystemFormatter.cs" />
+    <Compile Include="HostKeyAlgorithm.cs" />
+    <Compile Include="KeyExchangeAlgorithm.cs" />
     <Compile Include="LogLevel.cs" />
     <Compile Include="Match.cs" />
+    <Compile Include="MessageAuthenticationCodeAlgorithm.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SshdConfig.cs" />
     <Compile Include="Subsystem.cs" />

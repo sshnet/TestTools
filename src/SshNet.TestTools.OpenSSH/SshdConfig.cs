@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using SshNet.TestTools.OpenSSH.Formatters;
@@ -10,6 +11,8 @@ namespace SshNet.TestTools.OpenSSH
 {
     public class SshdConfig
     {
+        private static readonly Regex matchRegex = new Regex($@"\s*Match\s+(User\s+(?<users>[\S]+))?\s*(Address\s+(?<addresses>[\S]+))?\s*", RegexOptions.Compiled);
+
         private readonly SubsystemFormatter _subsystemFormatter;
         private readonly Int32Formatter _int32Formatter;
         private readonly BooleanFormatter _booleanFormatter;
@@ -22,6 +25,7 @@ namespace SshNet.TestTools.OpenSSH
             LogLevel = LogLevel.Info;
             Port = 22;
             UsePAM = true;
+            AcceptedEnvironmentVariables = new List<string>();
 
             _booleanFormatter = new BooleanFormatter();
             _int32Formatter = new Int32Formatter();
@@ -70,6 +74,12 @@ namespace SshNet.TestTools.OpenSSH
         /// Gets a list of conditional blocks.
         /// </summary>
         public List<Match> Matches { get; }
+        public bool X11Forwarding { get; private set; }
+        public List<string> AcceptedEnvironmentVariables { get; private set; }
+        public List<Cipher> Ciphers { get; private set; }
+        public List<HostKeyAlgorithm> HostKeyAlgorithms { get; private set; }
+        public List<KeyExchangeAlgorithm> KeyExchangeAlgorithms { get; private set; }
+        public List<MessageAuthenticationCodeAlgorithm> MessageAuthenticationCodeAlgorithms { get; private set; }
 
         public void SaveTo(TextWriter writer)
         {
@@ -81,15 +91,37 @@ namespace SshNet.TestTools.OpenSSH
             foreach (var subsystem in Subsystems)
                 writer.WriteLine("Subsystem " + _subsystemFormatter.Format(subsystem));
             writer.WriteLine("UsePAM " + _booleanFormatter.Format(UsePAM));
+            writer.WriteLine("X11Forwarding " + _booleanFormatter.Format(X11Forwarding));
             foreach (var match in Matches)
                 _matchFormatter.Format(match, writer);
+            foreach (var acceptedEnvVar in AcceptedEnvironmentVariables)
+                writer.WriteLine("AcceptEnv " + acceptedEnvVar);
+
+            if (Ciphers.Count > 0)
+            {
+                writer.WriteLine("Ciphers " + string.Join(",", Ciphers));
+            }
+
+            if (HostKeyAlgorithms.Count > 0)
+            {
+                writer.WriteLine("HostKeyAlgorithms " + string.Join(",", HostKeyAlgorithms));
+            }
+
+            if (KeyExchangeAlgorithms.Count > 0)
+            {
+                writer.WriteLine("KexAlgorithms " + string.Join(",", KeyExchangeAlgorithms));
+            }
+
+            if (MessageAuthenticationCodeAlgorithms.Count > 0)
+            {
+                writer.WriteLine("MACs " + string.Join(",", MessageAuthenticationCodeAlgorithms));
+            }
         }
 
         public static SshdConfig LoadFrom(Stream stream, Encoding encoding)
         {
             using (var sr = new StreamReader(stream, encoding))
             {
-                var matchRegex = new Regex($@"\s*Match\s+(User\s+(?<users>[\S]+))?\s*(Address\s+(?<addresses>[\S]+))?\s*");
                 var sshdConfig = new SshdConfig();
 
                 Match currentMatchConfiguration = null;
@@ -97,6 +129,18 @@ namespace SshNet.TestTools.OpenSSH
                 string line;
                 while ((line = sr.ReadLine()) != null)
                 {
+                    // Skip empty lines
+                    if (line.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    // Skip comments
+                    if (line[0] == '#')
+                    {
+                        continue;
+                    }
+
                     var match = matchRegex.Match(line);
                     if (match.Success)
                     {
@@ -119,6 +163,27 @@ namespace SshNet.TestTools.OpenSSH
                         ProcessGlobalOption(sshdConfig, line);
                     }
                 }
+
+                if (sshdConfig.Ciphers == null)
+                {
+                    // Obtain supported ciphers using ssh -Q cipher
+                }
+
+                if (sshdConfig.KeyExchangeAlgorithms == null)
+                {
+                    // Obtain supports key exchange algorithms using ssh -Q kex
+                }
+
+                if (sshdConfig.HostKeyAlgorithms == null)
+                {
+                    // Obtain supports host key algorithms using ssh -Q key
+                }
+
+                if (sshdConfig.MessageAuthenticationCodeAlgorithms == null)
+                {
+                    // Obtain supported MACs using ssh -Q mac 
+                }
+
 
                 return sshdConfig;
             }
@@ -158,9 +223,26 @@ namespace SshNet.TestTools.OpenSSH
                 case "UsePAM":
                     sshdConfig.UsePAM = ToBool(value);
                     break;
+                case "X11Forwarding":
+                    sshdConfig.X11Forwarding = ToBool(value);
+                    break;
+                case "Ciphers":
+                    sshdConfig.Ciphers = ParseCiphers(value);
+                    break;
                 default:
                     throw new Exception($"Global option '{name}' is not implemented.");
             }
+        }
+
+        private static List<Cipher> ParseCiphers(string value)
+        {
+            var cipherNames = value.Split(',');
+            var ciphers = new List<Cipher>(cipherNames.Length);
+            foreach (var cipherName in cipherNames)
+            {
+                ciphers.Add(new Cipher(cipherName.Trim()));
+            }
+            return ciphers;
         }
 
         private static void ProcessMatchOption(Match matchConfiguration, string line)
