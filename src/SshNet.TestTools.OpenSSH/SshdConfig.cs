@@ -229,6 +229,15 @@ namespace SshNet.TestTools.OpenSSH
                 case "Ciphers":
                     sshdConfig.Ciphers = ParseCiphers(value);
                     break;
+                case "KexAlgorithms":
+                    sshdConfig.KeyExchangeAlgorithms = ParseKeyExchangeAlgorithms(value);
+                    break;
+                case "HostKeyAlgorithms":
+                    sshdConfig.HostKeyAlgorithms = ParseHostKeyAlgorithms(value);
+                    break;
+                case "MACs":
+                    sshdConfig.MessageAuthenticationCodeAlgorithms = ParseMacs(value);
+                    break;
                 default:
                     throw new Exception($"Global option '{name}' is not implemented.");
             }
@@ -243,6 +252,39 @@ namespace SshNet.TestTools.OpenSSH
                 ciphers.Add(new Cipher(cipherName.Trim()));
             }
             return ciphers;
+        }
+
+        private static List<KeyExchangeAlgorithm> ParseKeyExchangeAlgorithms(string value)
+        {
+            var kexNames = value.Split(',');
+            var keyExchangeAlgorithms = new List<KeyExchangeAlgorithm>(kexNames.Length);
+            foreach (var kexName in kexNames)
+            {
+                keyExchangeAlgorithms.Add(new KeyExchangeAlgorithm(kexName.Trim()));
+            }
+            return keyExchangeAlgorithms;
+        }
+
+        private static List<HostKeyAlgorithm> ParseHostKeyAlgorithms(string value)
+        {
+            var algorithmNames = value.Split(',');
+            var hostKeyAlgorithms = new List<HostKeyAlgorithm>(algorithmNames.Length);
+            foreach (var algorithmName in algorithmNames)
+            {
+                hostKeyAlgorithms.Add(new HostKeyAlgorithm(algorithmName.Trim()));
+            }
+            return hostKeyAlgorithms;
+        }
+
+        private static List<MessageAuthenticationCodeAlgorithm> ParseMacs(string value)
+        {
+            var macNames = value.Split(',');
+            var macAlgorithms = new List<MessageAuthenticationCodeAlgorithm>(macNames.Length);
+            foreach (var algorithmName in macNames)
+            {
+                macAlgorithms.Add(new MessageAuthenticationCodeAlgorithm(algorithmName.Trim()));
+            }
+            return macAlgorithms;
         }
 
         private static void ProcessMatchOption(Match matchConfiguration, string line)

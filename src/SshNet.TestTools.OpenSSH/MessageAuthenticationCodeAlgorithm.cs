@@ -21,7 +21,7 @@
         public static readonly MessageAuthenticationCodeAlgorithm Umac64_Etm = new MessageAuthenticationCodeAlgorithm("umac-64-etm@openssh.com");
         public static readonly MessageAuthenticationCodeAlgorithm Umac128_Etm = new MessageAuthenticationCodeAlgorithm("umac-128-etm@openssh.com");
 
-        private MessageAuthenticationCodeAlgorithm(string name)
+        public MessageAuthenticationCodeAlgorithm(string name)
         {
             Name = name;
         }

@@ -16,7 +16,8 @@
         public static readonly KeyExchangeAlgorithm Curve25519Sha256Libssh = new KeyExchangeAlgorithm("curve25519-sha256@libssh.org");
         public static readonly KeyExchangeAlgorithm Sntrup4591761x25519Sha512 = new KeyExchangeAlgorithm("sntrup4591761x25519-sha512@tinyssh.org");
 
-        private KeyExchangeAlgorithm(string name)
+
+        public KeyExchangeAlgorithm(string name)
         {
             Name = name;
         }
