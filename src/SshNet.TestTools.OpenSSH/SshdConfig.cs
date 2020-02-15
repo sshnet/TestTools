@@ -20,12 +20,18 @@ namespace SshNet.TestTools.OpenSSH
 
         private SshdConfig()
         {
+            AcceptedEnvironmentVariables = new List<string>();
+            Ciphers = new List<Cipher>();
+            HostKeyAlgorithms = new List<HostKeyAlgorithm>();
+            KeyExchangeAlgorithms = new List<KeyExchangeAlgorithm>();
+            MessageAuthenticationCodeAlgorithms = new List<MessageAuthenticationCodeAlgorithm>();
             Subsystems = new List<Subsystem>();
             Matches = new List<Match>();
             LogLevel = LogLevel.Info;
             Port = 22;
+            Protocol = "2,1";
             UsePAM = true;
-            AcceptedEnvironmentVariables = new List<string>();
+            UsePrivilegeSeparation = true;
 
             _booleanFormatter = new BooleanFormatter();
             _int32Formatter = new Int32Formatter();
@@ -46,7 +52,7 @@ namespace SshNet.TestTools.OpenSSH
         /// <value>
         /// A file containing a private host key used by sshd.
         /// </value>
-        public string HostKey { get; set; }
+        public string HostKeyFile { get; set; }
         /// <summary>
         /// Gets or sets a value specifying whether challenge-response authentication is allowed.
         /// </summary>
@@ -80,20 +86,42 @@ namespace SshNet.TestTools.OpenSSH
         public List<HostKeyAlgorithm> HostKeyAlgorithms { get; private set; }
         public List<KeyExchangeAlgorithm> KeyExchangeAlgorithms { get; private set; }
         public List<MessageAuthenticationCodeAlgorithm> MessageAuthenticationCodeAlgorithms { get; private set; }
+        public bool PrintMessageOfTheDay { get; private set; }
+        /// <summary>
+        /// Gets or sets the protocol versions sshd supported.
+        /// </summary>
+        /// <value>
+        /// The protocol versions sshd supported. The default is <c>2,1</c>.
+        /// </value>
+        public string Protocol { get; set; }
+        /// <summary>
+        /// Gets or sets a value indicating whether sshd separates privileges by creating an unprivileged child process
+        /// to deal with incoming network traffic.
+        /// </summary>
+        /// <value>
+        /// <see langword="true"/> if sshd separates privileges by creating an unprivileged child process to deal with
+        /// incoming network traffic; otherwise, <see langword="false"/>. The default is <see langword="true"/>.
+        /// </value>
+        public bool UsePrivilegeSeparation { get; set; }
 
         public void SaveTo(TextWriter writer)
         {
+            writer.WriteLine("Protocol " + Protocol);
             writer.WriteLine("Port " + _int32Formatter.Format(Port));
-            if (HostKey != null)
-                writer.WriteLine("HostKey " + HostKey);
+            if (HostKeyFile != null)
+                writer.WriteLine("HostKey " + HostKeyFile);
             writer.WriteLine("ChallengeResponseAuthentication " + _booleanFormatter.Format(ChallengeResponseAuthentication));
             writer.WriteLine("LogLevel " + new LogLevelFormatter().Format(LogLevel));
             foreach (var subsystem in Subsystems)
                 writer.WriteLine("Subsystem " + _subsystemFormatter.Format(subsystem));
             writer.WriteLine("UsePAM " + _booleanFormatter.Format(UsePAM));
+            writer.WriteLine("UsePrivilegeSeparation " + _booleanFormatter.Format(UsePrivilegeSeparation));
             writer.WriteLine("X11Forwarding " + _booleanFormatter.Format(X11Forwarding));
+            writer.WriteLine("PrintMotd " + _booleanFormatter.Format(PrintMessageOfTheDay));
+
             foreach (var match in Matches)
                 _matchFormatter.Format(match, writer);
+
             foreach (var acceptedEnvVar in AcceptedEnvironmentVariables)
                 writer.WriteLine("AcceptEnv " + acceptedEnvVar);
 
@@ -209,7 +237,7 @@ namespace SshNet.TestTools.OpenSSH
                     sshdConfig.Port = ToInt(value);
                     break;
                 case "HostKey":
-                    sshdConfig.HostKey = value;
+                    sshdConfig.HostKeyFile = value;
                     break;
                 case "ChallengeResponseAuthentication":
                     sshdConfig.ChallengeResponseAuthentication = ToBool(value);
@@ -238,8 +266,45 @@ namespace SshNet.TestTools.OpenSSH
                 case "MACs":
                     sshdConfig.MessageAuthenticationCodeAlgorithms = ParseMacs(value);
                     break;
+                case "PrintMotd":
+                    sshdConfig.PrintMessageOfTheDay = ToBool(value);
+                    break;
+                case "AcceptEnv":
+                    ParseAcceptedEnvironmentVariable(sshdConfig, value);
+                    break;
+                case "Protocol":
+                    sshdConfig.Protocol = value;
+                    break;
+                case "UsePrivilegeSeparation":
+                    sshdConfig.UsePrivilegeSeparation = ToBool(value);
+                    break;
+                case "KeyRegenerationInterval":
+                case "HostbasedAuthentication":
+                case "ServerKeyBits":
+                case "SyslogFacility":
+                case "LoginGraceTime":
+                case "PermitRootLogin":
+                case "StrictModes":
+                case "RSAAuthentication":
+                case "PubkeyAuthentication":
+                case "IgnoreRhosts":
+                case "RhostsRSAAuthentication":
+                case "PermitEmptyPasswords":
+                case "X11DisplayOffset":
+                case "PrintLastLog":
+                case "TCPKeepAlive":
+                    break;
                 default:
                     throw new Exception($"Global option '{name}' is not implemented.");
+            }
+        }
+
+        private static void ParseAcceptedEnvironmentVariable(SshdConfig sshdConfig, string value)
+        {
+            var acceptedEnvironmentVariables = value.Split(' ');
+            foreach (var acceptedEnvironmentVariable in acceptedEnvironmentVariables)
+            {
+                sshdConfig.AcceptedEnvironmentVariables.Add(acceptedEnvironmentVariable);
             }
         }
 
