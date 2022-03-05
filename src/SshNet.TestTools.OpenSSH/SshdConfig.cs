@@ -22,8 +22,10 @@ namespace SshNet.TestTools.OpenSSH
         {
             AcceptedEnvironmentVariables = new List<string>();
             Ciphers = new List<Cipher>();
+            HostKeyFiles = new List<string>();
             HostKeyAlgorithms = new List<HostKeyAlgorithm>();
             KeyExchangeAlgorithms = new List<KeyExchangeAlgorithm>();
+            PublicKeyAcceptedAlgorithms = new List<PublicKeyAlgorithm>();
             MessageAuthenticationCodeAlgorithms = new List<MessageAuthenticationCodeAlgorithm>();
             Subsystems = new List<Subsystem>();
             Matches = new List<Match>();
@@ -31,7 +33,7 @@ namespace SshNet.TestTools.OpenSSH
             Port = 22;
             Protocol = "2,1";
             UsePAM = true;
-            UsePrivilegeSeparation = true;
+            PrintMessageOfTheDay = true;
 
             _booleanFormatter = new BooleanFormatter();
             _int32Formatter = new Int32Formatter();
@@ -47,12 +49,12 @@ namespace SshNet.TestTools.OpenSSH
         /// </value>
         public int Port { get; set; }
         /// <summary>
-        /// Gets or sets a file containing a private host key used by sshd.
+        /// Gets or sets the list of private host key files used by sshd.
         /// </summary>
         /// <value>
-        /// A file containing a private host key used by sshd.
+        /// A list of private host key files used by sshd.
         /// </value>
-        public string HostKeyFile { get; set; }
+        public List<string> HostKeyFiles { get; set; }
         /// <summary>
         /// Gets or sets a value specifying whether challenge-response authentication is allowed.
         /// </summary>
@@ -76,17 +78,45 @@ namespace SshNet.TestTools.OpenSSH
         /// </value>
         public bool UsePAM { get; set; }
         public List<Subsystem> Subsystems { get; }
+
         /// <summary>
         /// Gets a list of conditional blocks.
         /// </summary>
         public List<Match> Matches { get; }
+
         public bool X11Forwarding { get; private set; }
         public List<string> AcceptedEnvironmentVariables { get; private set; }
         public List<Cipher> Ciphers { get; private set; }
+
+        /// <summary>
+        /// Gets the host key signature algorithms that the server offers.
+        /// </summary>
         public List<HostKeyAlgorithm> HostKeyAlgorithms { get; private set; }
+
+        /// <summary>
+        /// Gets the available KEX (Key Exchange) algorithms.
+        /// </summary>
         public List<KeyExchangeAlgorithm> KeyExchangeAlgorithms { get; private set; }
+
+        /// <summary>
+        /// Gets the signature algorithms that will be accepted for public key authentication.
+        /// </summary>
+        public List<PublicKeyAlgorithm> PublicKeyAcceptedAlgorithms { get; private set; }
+
+        /// <summary>
+        /// Gets the available MAC (message authentication code) algorithms.
+        /// </summary>
         public List<MessageAuthenticationCodeAlgorithm> MessageAuthenticationCodeAlgorithms { get; private set; }
+
+        /// <summary>
+        /// Gets a value indicating whether <c>sshd</c> should print <c>/etc/motd</c> when a user logs in interactively.
+        /// </summary>
+        /// <value>
+        /// <see langword="true"/> if <c>sshd</c> should print <c>/etc/motd</c> when a user logs in interactively;
+        /// otherwise, <see langword="false"/>. The default is <see langword="true"/>.
+        /// </value>
         public bool PrintMessageOfTheDay { get; private set; }
+
         /// <summary>
         /// Gets or sets the protocol versions sshd supported.
         /// </summary>
@@ -94,56 +124,56 @@ namespace SshNet.TestTools.OpenSSH
         /// The protocol versions sshd supported. The default is <c>2,1</c>.
         /// </value>
         public string Protocol { get; set; }
-        /// <summary>
-        /// Gets or sets a value indicating whether sshd separates privileges by creating an unprivileged child process
-        /// to deal with incoming network traffic.
-        /// </summary>
-        /// <value>
-        /// <see langword="true"/> if sshd separates privileges by creating an unprivileged child process to deal with
-        /// incoming network traffic; otherwise, <see langword="false"/>. The default is <see langword="true"/>.
-        /// </value>
-        public bool UsePrivilegeSeparation { get; set; }
 
         public void SaveTo(TextWriter writer)
         {
             writer.WriteLine("Protocol " + Protocol);
             writer.WriteLine("Port " + _int32Formatter.Format(Port));
-            if (HostKeyFile != null)
-                writer.WriteLine("HostKey " + HostKeyFile);
+            if (HostKeyFiles.Count > 0)
+            {
+                writer.WriteLine("HostKey " + string.Join(",", HostKeyFiles.ToArray()));
+            }
             writer.WriteLine("ChallengeResponseAuthentication " + _booleanFormatter.Format(ChallengeResponseAuthentication));
             writer.WriteLine("LogLevel " + new LogLevelFormatter().Format(LogLevel));
+
             foreach (var subsystem in Subsystems)
+            {
                 writer.WriteLine("Subsystem " + _subsystemFormatter.Format(subsystem));
+            }
+
             writer.WriteLine("UsePAM " + _booleanFormatter.Format(UsePAM));
-            writer.WriteLine("UsePrivilegeSeparation " + _booleanFormatter.Format(UsePrivilegeSeparation));
             writer.WriteLine("X11Forwarding " + _booleanFormatter.Format(X11Forwarding));
             writer.WriteLine("PrintMotd " + _booleanFormatter.Format(PrintMessageOfTheDay));
 
-            foreach (var match in Matches)
-                _matchFormatter.Format(match, writer);
-
             foreach (var acceptedEnvVar in AcceptedEnvironmentVariables)
+            {
                 writer.WriteLine("AcceptEnv " + acceptedEnvVar);
+            }
 
             if (Ciphers.Count > 0)
             {
-                writer.WriteLine("Ciphers " + string.Join(",", Ciphers));
+                writer.WriteLine("Ciphers " + string.Join(",", Ciphers.Select(c => c.Name).ToArray()));
             }
 
             if (HostKeyAlgorithms.Count > 0)
             {
-                writer.WriteLine("HostKeyAlgorithms " + string.Join(",", HostKeyAlgorithms));
+                writer.WriteLine("HostKeyAlgorithms " + string.Join(",", HostKeyAlgorithms.Select(c => c.Name).ToArray()));
             }
 
             if (KeyExchangeAlgorithms.Count > 0)
             {
-                writer.WriteLine("KexAlgorithms " + string.Join(",", KeyExchangeAlgorithms));
+                writer.WriteLine("KexAlgorithms " + string.Join(",", KeyExchangeAlgorithms.Select(c => c.Name).ToArray()));
             }
 
             if (MessageAuthenticationCodeAlgorithms.Count > 0)
             {
-                writer.WriteLine("MACs " + string.Join(",", MessageAuthenticationCodeAlgorithms));
+                writer.WriteLine("MACs " + string.Join(",", MessageAuthenticationCodeAlgorithms.Select(c => c.Name).ToArray()));
             }
+
+            writer.WriteLine("PubkeyAcceptedAlgorithms " + string.Join(",", PublicKeyAcceptedAlgorithms.Select(c => c.Name).ToArray()));
+
+            foreach (var match in Matches)
+                _matchFormatter.Format(match, writer);
         }
 
         public static SshdConfig LoadFrom(Stream stream, Encoding encoding)
@@ -174,8 +204,8 @@ namespace SshNet.TestTools.OpenSSH
                     {
                         var usersGroup = match.Groups["users"];
                         var addressesGroup = match.Groups["addresses"];
-                        var users = usersGroup.Success ? usersGroup.Value.Split(',') : Array.Empty<string>();
-                        var addresses = addressesGroup.Success ? addressesGroup.Value.Split(',') : Array.Empty<string>();
+                        var users = usersGroup.Success ? usersGroup.Value.Split(',') : new string[0];
+                        var addresses = addressesGroup.Success ? addressesGroup.Value.Split(',') : new string[0];
 
                         currentMatchConfiguration = new Match(users, addresses);
                         sshdConfig.Matches.Add(currentMatchConfiguration);
@@ -237,7 +267,7 @@ namespace SshNet.TestTools.OpenSSH
                     sshdConfig.Port = ToInt(value);
                     break;
                 case "HostKey":
-                    sshdConfig.HostKeyFile = value;
+                    sshdConfig.HostKeyFiles = ParseCommaSeparatedValue(value);
                     break;
                 case "ChallengeResponseAuthentication":
                     sshdConfig.ChallengeResponseAuthentication = ToBool(value);
@@ -260,6 +290,9 @@ namespace SshNet.TestTools.OpenSSH
                 case "KexAlgorithms":
                     sshdConfig.KeyExchangeAlgorithms = ParseKeyExchangeAlgorithms(value);
                     break;
+                case "PubkeyAcceptedAlgorithms":
+                    sshdConfig.PublicKeyAcceptedAlgorithms = ParsePublicKeyAcceptedAlgorithms(value);
+                    break;
                 case "HostKeyAlgorithms":
                     sshdConfig.HostKeyAlgorithms = ParseHostKeyAlgorithms(value);
                     break;
@@ -274,9 +307,6 @@ namespace SshNet.TestTools.OpenSSH
                     break;
                 case "Protocol":
                     sshdConfig.Protocol = value;
-                    break;
-                case "UsePrivilegeSeparation":
-                    sshdConfig.UsePrivilegeSeparation = ToBool(value);
                     break;
                 case "KeyRegenerationInterval":
                 case "HostbasedAuthentication":
@@ -293,6 +323,10 @@ namespace SshNet.TestTools.OpenSSH
                 case "X11DisplayOffset":
                 case "PrintLastLog":
                 case "TCPKeepAlive":
+                case "AuthorizedKeysFile":
+                case "PasswordAuthentication":
+                case "AllowTcpForwarding":
+                case "GatewayPorts":
                     break;
                 default:
                     throw new Exception($"Global option '{name}' is not implemented.");
@@ -328,6 +362,17 @@ namespace SshNet.TestTools.OpenSSH
                 keyExchangeAlgorithms.Add(new KeyExchangeAlgorithm(kexName.Trim()));
             }
             return keyExchangeAlgorithms;
+        }
+
+        public static List<PublicKeyAlgorithm> ParsePublicKeyAcceptedAlgorithms(string value)
+        {
+            var publicKeyAlgorithmNames = value.Split(',');
+            var publicKeyAlgorithms = new List<PublicKeyAlgorithm>(publicKeyAlgorithmNames.Length);
+            foreach (var publicKeyAlgorithmName in publicKeyAlgorithmNames)
+            {
+                publicKeyAlgorithms.Add(new PublicKeyAlgorithm(publicKeyAlgorithmName.Trim()));
+            }
+            return publicKeyAlgorithms;
         }
 
         private static List<HostKeyAlgorithm> ParseHostKeyAlgorithms(string value)
@@ -374,6 +419,13 @@ namespace SshNet.TestTools.OpenSSH
                 default:
                     throw new Exception($"Match option '{name}' is not implemented.");
             }
+        }
+
+
+        private static List<string> ParseCommaSeparatedValue(string value)
+        {
+            var values = value.Split(',');
+            return new List<string>(values);
         }
 
         private static bool ToBool(string value)
