@@ -32,7 +32,6 @@ namespace SshNet.TestTools.OpenSSH
             LogLevel = LogLevel.Info;
             Port = 22;
             Protocol = "2,1";
-            UsePAM = true;
             PrintMessageOfTheDay = true;
 
             _booleanFormatter = new BooleanFormatter();
@@ -48,6 +47,7 @@ namespace SshNet.TestTools.OpenSSH
         /// The port number that sshd listens on. The default is 22.
         /// </value>
         public int Port { get; set; }
+
         /// <summary>
         /// Gets or sets the list of private host key files used by sshd.
         /// </summary>
@@ -55,13 +55,25 @@ namespace SshNet.TestTools.OpenSSH
         /// A list of private host key files used by sshd.
         /// </value>
         public List<string> HostKeyFiles { get; set; }
+
         /// <summary>
         /// Gets or sets a value specifying whether challenge-response authentication is allowed.
         /// </summary>
         /// <value>
-        /// A value specifying whether challenge-response authentication is allowed. The default is <c>true</c>.
+        /// A value specifying whether challenge-response authentication is allowed, or <see langword="null"/>
+        /// if this option is not configured.
         /// </value>
-        public bool ChallengeResponseAuthentication { get; set; }
+        public bool? ChallengeResponseAuthentication { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to allow keyboard-interactive authentication.
+        /// </summary>
+        /// <value>
+        /// <see langword="true"/> to allow and <see langword="false"/> to disallow keyboard-interactive
+        /// authentication, or <see langword="null"/> if this option is not configured.
+        /// </value>
+        public bool? KeyboardInteractiveAuthentication { get; set; }
+
         /// <summary>
         /// Gets or sets the verbosity when logging messages from sshd.
         /// </summary>
@@ -69,14 +81,15 @@ namespace SshNet.TestTools.OpenSSH
         /// The verbosity when logging messages from sshd. The default is <see cref="OpenSSH.LogLevel.Info"/>.
         /// </value>
         public LogLevel LogLevel { get; set; }
+
         /// <summary>
         /// Gets a sets a value indicating whether the Pluggable Authentication Module interface is enabled.
         /// </summary>
         /// <value>
-        /// A value indicating whether the Pluggable Authentication Module interface is enabled. The default
-        /// is <c>true</c>.
+        /// A value indicating whether the Pluggable Authentication Module interface is enabled.
         /// </value>
-        public bool UsePAM { get; set; }
+        public bool? UsePAM { get; set; }
+
         public List<Subsystem> Subsystems { get; }
 
         /// <summary>
@@ -133,7 +146,17 @@ namespace SshNet.TestTools.OpenSSH
             {
                 writer.WriteLine("HostKey " + string.Join(",", HostKeyFiles.ToArray()));
             }
-            writer.WriteLine("ChallengeResponseAuthentication " + _booleanFormatter.Format(ChallengeResponseAuthentication));
+
+            if (ChallengeResponseAuthentication is not null)
+            {
+                writer.WriteLine("ChallengeResponseAuthentication " + _booleanFormatter.Format(ChallengeResponseAuthentication.Value));
+            }
+
+            if (KeyboardInteractiveAuthentication is not null)
+            {
+                writer.WriteLine("KbdInteractiveAuthentication " + _booleanFormatter.Format(KeyboardInteractiveAuthentication.Value));
+            }
+
             writer.WriteLine("LogLevel " + new LogLevelFormatter().Format(LogLevel));
 
             foreach (var subsystem in Subsystems)
@@ -141,7 +164,11 @@ namespace SshNet.TestTools.OpenSSH
                 writer.WriteLine("Subsystem " + _subsystemFormatter.Format(subsystem));
             }
 
-            writer.WriteLine("UsePAM " + _booleanFormatter.Format(UsePAM));
+            if (UsePAM is not null)
+            {
+                writer.WriteLine("UsePAM " + _booleanFormatter.Format(UsePAM.Value));
+            }
+
             writer.WriteLine("X11Forwarding " + _booleanFormatter.Format(X11Forwarding));
             writer.WriteLine("PrintMotd " + _booleanFormatter.Format(PrintMessageOfTheDay));
 
@@ -271,6 +298,9 @@ namespace SshNet.TestTools.OpenSSH
                     break;
                 case "ChallengeResponseAuthentication":
                     sshdConfig.ChallengeResponseAuthentication = ToBool(value);
+                    break;
+                case "KbdInteractiveAuthentication":
+                    sshdConfig.KeyboardInteractiveAuthentication = ToBool(value);
                     break;
                 case "LogLevel":
                     sshdConfig.LogLevel = (LogLevel) Enum.Parse(typeof(LogLevel), value, true);
