@@ -32,7 +32,6 @@ namespace SshNet.TestTools.OpenSSH
             LogLevel = LogLevel.Info;
             Port = 22;
             Protocol = "2,1";
-            PrintMessageOfTheDay = true;
 
             _booleanFormatter = new BooleanFormatter();
             _int32Formatter = new Int32Formatter();
@@ -125,10 +124,10 @@ namespace SshNet.TestTools.OpenSSH
         /// Gets a value indicating whether <c>sshd</c> should print <c>/etc/motd</c> when a user logs in interactively.
         /// </summary>
         /// <value>
-        /// <see langword="true"/> if <c>sshd</c> should print <c>/etc/motd</c> when a user logs in interactively;
-        /// otherwise, <see langword="false"/>. The default is <see langword="true"/>.
+        /// <see langword="true"/> if <c>sshd</c> should print <c>/etc/motd</c> when a user logs in interactively
+        /// and <see langword="false"/> if it should not; <see langword="null"/> if this option is not configured.
         /// </value>
-        public bool PrintMessageOfTheDay { get; private set; }
+        public bool? PrintMotd { get; set; }
 
         /// <summary>
         /// Gets or sets the protocol versions sshd supported.
@@ -137,6 +136,15 @@ namespace SshNet.TestTools.OpenSSH
         /// The protocol versions sshd supported. The default is <c>2,1</c>.
         /// </value>
         public string Protocol { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether TCP forwarding is allowed.
+        /// </summary>
+        /// <value>
+        /// <see langword="true"/> to allow and <see langword="false"/> to disallow TCP forwarding,
+        /// or <see langword="null"/> if this option is not configured.
+        /// </value>
+        public bool? AllowTcpForwarding { get; set; }
 
         public void SaveTo(TextWriter writer)
         {
@@ -157,6 +165,16 @@ namespace SshNet.TestTools.OpenSSH
                 writer.WriteLine("KbdInteractiveAuthentication " + _booleanFormatter.Format(KeyboardInteractiveAuthentication.Value));
             }
 
+            if (AllowTcpForwarding is not null)
+            {
+                writer.WriteLine("AllowTcpForwarding " + _booleanFormatter.Format(AllowTcpForwarding.Value));
+            }
+
+            if (PrintMotd is not null)
+            {
+                writer.WriteLine("PrintMotd " + _booleanFormatter.Format(PrintMotd.Value));
+            }
+
             writer.WriteLine("LogLevel " + new LogLevelFormatter().Format(LogLevel));
 
             foreach (var subsystem in Subsystems)
@@ -170,7 +188,6 @@ namespace SshNet.TestTools.OpenSSH
             }
 
             writer.WriteLine("X11Forwarding " + _booleanFormatter.Format(X11Forwarding));
-            writer.WriteLine("PrintMotd " + _booleanFormatter.Format(PrintMessageOfTheDay));
 
             foreach (var acceptedEnvVar in AcceptedEnvironmentVariables)
             {
@@ -330,13 +347,16 @@ namespace SshNet.TestTools.OpenSSH
                     sshdConfig.MessageAuthenticationCodeAlgorithms = ParseMacs(value);
                     break;
                 case "PrintMotd":
-                    sshdConfig.PrintMessageOfTheDay = ToBool(value);
+                    sshdConfig.PrintMotd = ToBool(value);
                     break;
                 case "AcceptEnv":
                     ParseAcceptedEnvironmentVariable(sshdConfig, value);
                     break;
                 case "Protocol":
                     sshdConfig.Protocol = value;
+                    break;
+                case "AllowTcpForwarding":
+                    sshdConfig.AllowTcpForwarding = false;
                     break;
                 case "KeyRegenerationInterval":
                 case "HostbasedAuthentication":
@@ -355,7 +375,6 @@ namespace SshNet.TestTools.OpenSSH
                 case "TCPKeepAlive":
                 case "AuthorizedKeysFile":
                 case "PasswordAuthentication":
-                case "AllowTcpForwarding":
                 case "GatewayPorts":
                     break;
                 default:
