@@ -356,7 +356,7 @@ namespace SshNet.TestTools.OpenSSH
                     sshdConfig.Protocol = value;
                     break;
                 case "AllowTcpForwarding":
-                    sshdConfig.AllowTcpForwarding = false;
+                    sshdConfig.AllowTcpForwarding = ToBool(value);
                     break;
                 case "KeyRegenerationInterval":
                 case "HostbasedAuthentication":
